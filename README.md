@@ -2,8 +2,6 @@
 
 > AI assistant that auto-generates READMEs, reviews PRs, tracks docs and repo health for every GitHub project — MERN + LangGraph + multi-LLM powered.
 
-*(20-word description above — use as GitHub "About" tagline)*
-
 ---
 
 ## 📌 Problem
@@ -139,7 +137,3 @@ See `backend/.env.example` and `frontend/.env.example` for the full list (Mongo 
 1. Fork the repo
 2. Create a feature branch: `git checkout -b feature/your-feature`
 3. Commit your changes and open a PR
-
-## 📄 License
-
-MIT
