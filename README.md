@@ -1,139 +1,77 @@
-# RepoSense
+# RepoSense 🚀
 
-> AI assistant that auto-generates READMEs, reviews PRs, tracks docs and repo health for every GitHub project — MERN + LangGraph + multi-LLM powered.
+> Production-grade AI Assistant & Co-Pilot for every GitHub Repo Owner. Auto-generates READMEs with live previews, runs context-aware PR reviews, triages issues with vector similarity, scores repository health, and provides a multi-LLM RAG chat co-pilot.
 
 ---
 
-## 📌 Problem
+> [!IMPORTANT]
+> **FIRST FILE TO READ:** Please read [`hello.txt`](file:///hello.txt) in the project root for complete, step-by-step setup instructions, environment variable details, API key links, and troubleshooting steps.
 
-Most personal and open-source GitHub repos face the same recurring issues:
-- **Missing or poor README** — new visitors/recruiters can't understand the project.
-- **Outdated documentation** — code changes, but docs/changelog are forgotten.
-- **Confusing onboarding** — new contributors don't know where to start in a large repo.
-- **Slow, manual PR review** — style/logic issues get missed, feedback is delayed.
-- **Issue management chaos** — duplicate issues, missing labels, unclear priority.
-- **Invisible repo health** — no way to tell if a project is active or abandoned.
-- **Unreadable commit activity** — hard to explain progress to non-technical stakeholders.
-- **Small fixes eat time** — formatting and unused imports need manual cleanup.
+---
 
-## ✅ Solution
+## 📌 Problem & Solution
 
-**RepoSense** connects to your GitHub repo and, using a multi-LLM AI pipeline (Groq for speed, Gemini for multimodal input, OpenAI for deep reasoning — routed via LangGraph, with RAG for repo-specific context), automatically:
+### Problems Solved:
+1. **Missing or Poor README**: New visitors & recruiters leave projects lacking installation or usage documentation.
+2. **Outdated Documentation**: Code evolves, but API docs and CHANGELOGs fall behind.
+3. **Onboarding Confusion**: New contributors don't understand large codebase folder structures.
+4. **Slow Code Review**: Manual PR reviews take hours and miss edge cases or unused variables.
+5. **Issue Management Chaos**: Unlabeled, duplicate issues create maintainer overhead.
+6. **Invisible Repo Health**: No standardized metrics to judge if a repo is active or abandoned.
 
-- Scans the repo and generates a full **README.md** (with live Markdown preview) when one is missing or incomplete.
-- Reviews Pull Requests line-by-line with a plain-language Quality Score.
-- Keeps API docs / CHANGELOG / Wiki pages fresh with auto-drafted updates.
-- Builds a personalized onboarding roadmap for new contributors.
-- Auto-labels and de-duplicates issues.
-- Scores overall repo health (0–100) with a breakdown chart and trend graph.
-- Converts commit activity into a plain-language digest for managers/clients.
-- Auto-fixes small issues (formatting, unused imports) as a ready-to-merge PR.
-- Lets you ask questions about your repo directly in a **Chat** tab that routes to the best AI model and answers with Problem + Solution + an action button.
+### Solution:
+**RepoSense** connects to your GitHub repository and runs a multi-agent AI pipeline (Groq for sub-second chat, Google Gemini for multimodal analysis, OpenAI for deep reasoning, and RAG over vector embeddings) to automate maintenance end-to-end.
+
+---
 
 ## 🧱 Tech Stack
 
-| Layer | Tech |
-|---|---|
-| Frontend | React 18 (Vite), React Router, Axios, react-markdown |
-| Backend | Node.js, Express, MongoDB (Mongoose), Redis |
-| AI | LangChain + LangGraph (multi-LLM routing), RAG, Gemini / Groq / OpenAI |
-| Auth | GitHub OAuth + JWT |
+- **Frontend (`/client`)**: React 18, Vite, React Router v6, Tailwind CSS, Recharts, `react-markdown` + `remark-gfm` + `rehype-highlight` (GitHub-style Markdown live preview), Zustand, Axios, React Hook Form + Zod, `react-hot-toast`.
+- **Backend (`/server`)**: Node.js, Express.js, MongoDB (Mongoose), Redis (ioredis & BullMQ job queues), JWT (httpOnly cookies), Octokit GitHub API.
+- **AI & RAG**: Multi-LLM router (Groq, Google Gemini, OpenAI via server env keys), MongoDB Atlas Vector Search / Local Cosine Similarity fallback, AES-256-GCM GitHub token encryption.
+- **Security**: Helmet, CORS, Express Rate Limit, Express Mongo Sanitize.
 
-## 📁 Project Structure
+---
 
-```
-reposense/
-├── backend/
-│   ├── config/          # db.js, redis.js
-│   ├── controllers/     # authController, repoController, readmeController, chatController
-│   ├── middleware/       # auth.js (JWT protect)
-│   ├── models/           # User.js, Repo.js
-│   ├── routes/            # authRoutes, repoRoutes, readmeRoutes, chatRoutes
-│   ├── services/          # scanService.js, readmeService.js
-│   ├── .env.example
-│   ├── package.json
-│   └── server.js
-├── frontend/
-│   ├── src/
-│   │   ├── api/client.js
-│   │   ├── components/Navbar.jsx
-│   │   ├── pages/         # Landing, Dashboard, Scan, ReadmeGenerator, Chat
-│   │   ├── styles/index.css
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── .env.example
-│   ├── index.html
-│   ├── package.json
-│   └── vite.config.js
-├── .gitignore
-└── README.md
-```
+## 🚀 Quick Start Guide
 
-## ⚙️ Installation & Setup
+Refer to [`hello.txt`](file:///hello.txt) for comprehensive environment variable setup.
 
-### Prerequisites
-- Node.js ≥ 18
-- MongoDB running locally or a connection URI (e.g. MongoDB Atlas)
-- Redis running locally or a connection URI (optional in dev)
-- A GitHub OAuth App (Client ID + Secret)
-- API keys for OpenAI / Groq / Gemini (only needed for the AI features you use)
-
-### 1. Clone & install
+### Single Command Execution (Root Directory)
 ```bash
-git clone https://github.com/<your-username>/reposense.git
-cd reposense
+# Install dependencies
+npm run install-all
 
-# Backend
-cd backend
-npm install
-cp .env.example .env    # fill in your Mongo URI, JWT secret, GitHub OAuth, AI keys
+# Start MongoDB and Redis background services
+docker compose up -d mongo redis
 
-# Frontend
-cd ../frontend
-npm install
-cp .env.example .env    # set VITE_API_BASE_URL if different from default
-```
+# Run database migration if upgrading from previous versions
+cd server && npm run migrate:remove-settings && cd ..
 
-### 2. Run in development
-Open two terminals:
-
-```bash
-# Terminal 1 — backend (http://localhost:5000)
-cd backend
-npm run dev
-
-# Terminal 2 — frontend (http://localhost:5173)
-cd frontend
+# Start both client and server simultaneously
 npm run dev
 ```
 
-Visit **http://localhost:5173** — click **Connect with GitHub** to log in, then use the Dashboard, Scan, ReadMe and Chat tabs.
+Visit **http://localhost:5173** in your desktop browser.
 
-### 3. Production build
+---
+
+## 🧪 Running Tests & Database Migration
+
 ```bash
-cd frontend && npm run build      # outputs frontend/dist
-cd ../backend && npm start        # serve API (add a static file server / reverse proxy for dist)
+# Run one-time database cleanup migration
+cd server
+npm run migrate:remove-settings
+
+# Run server unit & two-user cross-tenant isolation tests
+npm test
+
+# Access internal visual QA page in browser
+# http://localhost:5173/dev/ui
 ```
 
-## 🔑 Environment Variables
+---
 
-See `backend/.env.example` and `frontend/.env.example` for the full list (Mongo URI, Redis URL, JWT secret, GitHub OAuth credentials, OpenAI/Groq/Gemini API keys).
+## 📄 License
 
-## 🗺️ API Overview
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/api/auth/github` | Start GitHub OAuth login |
-| GET | `/api/auth/github/callback` | OAuth callback, issues JWT |
-| GET | `/api/auth/me` | Get current user |
-| GET | `/api/repos` | List connected repos (Dashboard) |
-| POST | `/api/repos/scan` | Deep scan a repo by URL |
-| GET | `/api/repos/:id` | Get single repo detail |
-| POST | `/api/readme/generate` | Generate a README (with live preview) |
-| POST | `/api/chat/ask` | Ask RepoSense (multi-LLM router) |
-
-## 🤝 Contributing
-
-1. Fork the repo
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit your changes and open a PR
+Distributed under the MIT License.

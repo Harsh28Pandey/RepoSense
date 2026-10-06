@@ -1,0 +1,244 @@
+================================================================================
+                           REPOSENSE SETUP GUIDE (hello.txt)
+================================================================================
+This is the single authoritative setup guide for running RepoSense locally or deploying it.
+Follow the numbered sections below step-by-step to configure environment files, credentials, and services.
+
+--------------------------------------------------------------------------------
+SECTION 1: OVERVIEW OF ENVIRONMENT FILES
+--------------------------------------------------------------------------------
+RepoSense consists of two sub-projects: /server and /client. Each requires its own environment file:
+
+1. Server environment file:
+   - Target location: server/.env
+   - Template file: server/.env.example
+
+   Commands to create server/.env from template:
+   - Windows PowerShell:  Copy-Item server\.env.example server\.env
+   - Windows CMD:         copy server\.env.example server\.env
+   - macOS / Linux:       cp server/.env.example server/.env
+
+2. Client environment file:
+   - Target location: client/.env
+   - Template file: client/.env.example
+
+   Commands to create client/.env from template:
+   - Windows PowerShell:  Copy-Item client\.env.example client\.env
+   - Windows CMD:         copy client\.env.example client\.env
+   - macOS / Linux:       cp client/.env.example client/.env
+
+--------------------------------------------------------------------------------
+SECTION 2: BACKEND ENVIRONMENT VARIABLES (server/.env)
+--------------------------------------------------------------------------------
+Below is the complete list of environment variables used in server/.env. 
+Ensure every key matches server/.env.example exactly.
+
+1. PORT
+   - Description: Port on which the Express API server runs.
+   - Status: Optional (Defaults to 5000)
+   - Example: PORT=5000
+
+2. NODE_ENV
+   - Description: Application environment mode (development or production).
+   - Status: Optional (Defaults to development)
+   - Example: NODE_ENV=development
+
+3. CLIENT_URL
+   - Description: Frontend application URL for CORS restriction and redirect origins.
+   - Status: Required
+   - Example: CLIENT_URL=http://localhost:5173
+
+4. MONGODB_URI
+   - Description: Connection string for MongoDB database (stores users, scans, README versions, reviews, health snapshots, digests, and chat history).
+   - Status: Required
+   - Options:
+     a) Local MongoDB (via Docker Desktop):
+        MONGODB_URI=mongodb://127.0.0.1:27017/reposense
+     b) MongoDB Atlas Cloud (Free Tier):
+        Link: https://www.mongodb.com/cloud/atlas/register
+        Steps:
+        1. Sign up / Log in to MongoDB Atlas and create a free M0 cluster.
+        2. Under "Database Access", create a Database User (e.g., username: reposense_user, password: <your_password>).
+        3. Under "Network Access", add IP address "0.0.0.0/0" (Allow Access from Anywhere for local development).
+        4. Click "Connect" -> "Drivers" and copy the Node.js connection string:
+           MONGODB_URI=mongodb+srv://reposense_user:<your_password>@cluster0.mongodb.net/reposense?retryWrites=true&w=majority
+        5. (Optional) Create an Atlas Vector Search index on the "embeddingchunks" collection for vector RAG search. If skipped, RepoSense automatically uses cosine-similarity fallback in MongoDB.
+
+5. REDIS_URL
+   - Description: Connection string for Redis (handles BullMQ queues, rate-limiting, session state, and GitHub API caching).
+   - Status: Required
+   - Options:
+     a) Local Redis (via Docker):
+        REDIS_URL=redis://127.0.0.1:6379
+     b) Upstash Managed Redis (Free Tier):
+        Link: https://console.upstash.com
+        Steps:
+        1. Create a free Redis database in Upstash console.
+        2. Copy the endpoint URL. Note: Upstash uses TLS, so use the rediss:// scheme:
+           REDIS_URL=rediss://default:<password>@<endpoint>.upstash.io:6379
+
+6. SECURITY & ENCRYPTION KEYS (Generate 4 unique 32-byte hex strings)
+   - JWT_ACCESS_SECRET: Secret for signing 15-minute access tokens.
+   - JWT_REFRESH_SECRET: Secret for signing 7-day refresh tokens.
+   - COOKIE_SECRET: Secret for signing httpOnly cookies.
+   - ENCRYPTION_KEY: Exactly 32 bytes (64 hex chars or 32 ASCII chars) for AES-256-GCM encryption of user GitHub PATs and AI API keys in the database.
+   - GITHUB_WEBHOOK_SECRET: Secret used to verify incoming GitHub webhook signatures.
+
+   Command to generate each cryptographically secure key in your terminal:
+     node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+   IMPORTANT: Each key MUST be unique, different from the others, and NEVER committed to version control.
+
+   Examples:
+     JWT_ACCESS_SECRET=a8f9b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcd
+     JWT_REFRESH_SECRET=b7e8a1d2c3f4e567890123456789abcdef0123456789abcdef0123456789abcd
+     COOKIE_SECRET=c6d7e8f9a0b1c234567890123456789abcdef0123456789abcdef0123456789abcd
+     ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+     GITHUB_WEBHOOK_SECRET=d5e6f7a8b9c0d1234567890123456789abcdef0123456789abcdef0123456789abcd
+
+7. GITHUB OAUTH INTEGRATION
+   - GITHUB_CLIENT_ID: Client ID from GitHub OAuth App.
+   - GITHUB_CLIENT_SECRET: Client Secret from GitHub OAuth App.
+   - GITHUB_CALLBACK_URL: Authorization callback URL.
+     Default local value: http://localhost:5000/api/v1/github/callback
+
+   How to obtain GitHub OAuth Credentials:
+   1. Visit GitHub Developer Settings: https://github.com/settings/developers
+   2. Click "New OAuth App".
+   3. Fill in:
+      - Application name: RepoSense Assistant
+      - Homepage URL: http://localhost:5173
+      - Authorization callback URL: http://localhost:5000/api/v1/github/callback
+   4. Click "Register application".
+   5. Copy "Client ID" into GITHUB_CLIENT_ID.
+   6. Click "Generate a new client secret" and copy it into GITHUB_CLIENT_SECRET.
+
+   Alternative / Token Connection:
+   Users can also connect using a GitHub Personal Access Token (PAT) via the top-bar user menu ("Connect GitHub"):
+   - Link: https://github.com/settings/tokens
+   - Required Scopes: repo, read:user
+
+   GitHub Webhook Testing (Optional for local testing):
+   - Use ngrok (https://ngrok.com/download) to forward webhooks to localhost:
+     ngrok http 5000
+   - Set repo webhook URL to: https://<your-ngrok-subdomain>.ngrok-free.app/api/v1/webhooks/github
+   - Content-type: application/json
+   - Secret: value of GITHUB_WEBHOOK_SECRET
+
+8. AI PROVIDER KEYS (Server-level fallbacks)
+   - GEMINI_API_KEY: Google Gemini API key for multimodal analysis and fast generation.
+     Get key: https://aistudio.google.com/apikey
+   - GROQ_API_KEY: Groq API key for ultra-fast chat responses (Llama 3 / Mixtral models).
+     Get key: https://console.groq.com/keys
+   - OPENAI_API_KEY: OpenAI API key for deep reasoning and code reviews (GPT-4o).
+     Get key: https://platform.openai.com/api-keys (Requires active billing credits)
+
+   NOTE: Server environment keys are the ONLY source of AI provider keys. Individual per-user key input has been removed. If no server keys are set, AI features will notify users that AI is not configured on the server.
+
+9. SMTP CREDENTIALS FOR EMAIL & OTP VERIFICATION
+   - Required for sending 6-digit OTP verification codes during user signup, email changes, password resets, and automated digest emails.
+
+   Option A: Gmail with App Password (Recommended for quick testing)
+   Steps:
+   1. Enable 2-Step Verification on your Google Account (https://myaccount.google.com/security).
+   2. Generate an App Password at https://myaccount.google.com/apppasswords (Select app: Mail, device: Other).
+   3. Configure:
+      SMTP_HOST=smtp.gmail.com
+      SMTP_PORT=587
+      SMTP_USER=your_email@gmail.com
+      SMTP_PASS=your_16_character_app_password
+      EMAIL_FROM=RepoSense Assistant <your_email@gmail.com>
+
+   Option B: Brevo Free SMTP
+   Steps:
+   1. Sign up at https://app.brevo.com/settings/keys/smtp
+   2. Copy your SMTP server details and Master API Key / SMTP Password:
+      SMTP_HOST=smtp-relay.brevo.com
+      SMTP_PORT=587
+      SMTP_USER=your_brevo_account_email
+      SMTP_PASS=your_brevo_smtp_password
+      EMAIL_FROM=RepoSense Assistant <noreply@yourdomain.com>
+
+   NOTE: OTP verification email delivery will fail until SMTP credentials are populated.
+
+--------------------------------------------------------------------------------
+SECTION 3: FRONTEND ENVIRONMENT VARIABLES (client/.env)
+--------------------------------------------------------------------------------
+The frontend environment variables control client-side API routing.
+
+1. VITE_API_URL
+   - Description: Base URL of the backend REST API.
+   - Local Value: http://localhost:5000/api/v1
+   - Production Example: https://api.reposense.dev/api/v1
+
+   CRITICAL SECURITY NOTE: Only variables prefixed with VITE_ are exposed to the browser build. NEVER put secrets, passwords, or private keys inside client/.env.
+
+--------------------------------------------------------------------------------
+SECTION 4: HOW TO RUN REPOSENSE
+--------------------------------------------------------------------------------
+Prerequisites:
+- Node.js LTS (v18.0.0 or higher): https://nodejs.org
+- Docker Desktop (for MongoDB & Redis): https://www.docker.com/products/docker-desktop
+- Git: https://git-scm.com
+
+Standard Run Steps:
+1. Clone the repository and navigate to root directory:
+   cd RepoSense
+
+2. Install dependencies for all workspace modules:
+   npm run install-all
+
+3. Start MongoDB and Redis background containers with Docker Desktop:
+   docker compose up -d mongo redis
+
+4. Run client and server simultaneously using the root development script:
+   npm run dev
+
+   This launches:
+   - Backend API server on: http://localhost:5000
+   - Frontend Vite app on:  http://localhost:5173
+
+Full Docker Containerization Run (Optional):
+To build and run all 4 containers (Client, Server, MongoDB, Redis) via Docker Compose:
+   docker compose up --build
+
+Running Backend Integration & Isolation Tests:
+To run unit and two-user cross-tenant data isolation tests:
+   cd server
+   npm test
+
+First-Run Walkthrough Checklist:
+1. Open http://localhost:5173 in your desktop browser.
+2. Click "Create Account" (/signup) and register with your Full Name, Email, GitHub Username, and Password.
+3. Check your email for the 6-digit OTP code, enter it on /verify-otp to verify your account.
+4. Sign in on /signin using your GitHub username and password.
+5. Click "Connect GitHub" in the top-bar user menu to link your GitHub OAuth or Personal Access Token (the connected GitHub login MUST match the signup username).
+6. Go to Scan tab, select or enter a repository URL, and click "Run Deep Scan".
+
+--------------------------------------------------------------------------------
+SECTION 5: TROUBLESHOOTING & COMMON ISSUES
+--------------------------------------------------------------------------------
+1. Problem: OTP verification email not arriving.
+   Fix: Check SMTP_USER and SMTP_PASS in server/.env. For Gmail, ensure you created an App Password (not your primary password) and enabled 2-Step Verification.
+
+2. Problem: MongoDB connection error ("MongooseServerSelectionError").
+   Fix: Ensure Docker Desktop is running and the MongoDB container is up (`docker ps`). If using MongoDB Atlas, check that network access includes 0.0.0.0/0.
+
+3. Problem: Redis connection error ("ECONNREFUSED 127.0.0.1:6379").
+   Fix: Start the Redis container using `docker compose up -d redis`. For Upstash Redis, check if your URL starts with `rediss://`.
+
+4. Problem: GitHub OAuth error ("redirect_uri mismatch").
+   Fix: Verify GITHUB_CALLBACK_URL in server/.env exactly matches the Callback URL registered in your GitHub Developer Settings (http://localhost:5000/api/v1/github/callback).
+
+5. Problem: "Connected GitHub username does not match registered username" error.
+   Fix: RepoSense enforces strict security matching. The GitHub account you authenticate with on GitHub OAuth must match the GitHub username you registered with during signup.
+
+6. Problem: CORS error or missing auth cookie on localhost.
+   Fix: Ensure CLIENT_URL in server/.env matches http://localhost:5173 and VITE_API_URL in client/.env matches http://localhost:5000/api/v1.
+
+7. Problem: GitHub API Rate Limit (403 Rate Limit Exceeded).
+   Fix: Unauthenticated public requests are limited to 60/hr by GitHub. Connect your GitHub token in top-bar user menu -> Connect GitHub to raise your rate limit to 5,000/hr.
+
+================================================================================
+                           END OF SETUP GUIDE
+================================================================================

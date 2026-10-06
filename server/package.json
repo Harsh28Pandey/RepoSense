@@ -1,0 +1,45 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "RepoSense Backend API",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "node scripts/test-no-dummy.js && node scripts/test-no-pricing.js && node scripts/audit-isolation.js && node --test tests/**/*.test.js",
+    "test:no-dummy": "node scripts/test-no-dummy.js",
+    "test:no-pricing": "node scripts/test-no-pricing.js",
+    "audit:isolation": "node scripts/audit-isolation.js",
+    "migrate:remove-settings": "node scripts/remove-settings-data.js",
+    "setup": "node scripts/check-env.js",
+    "check:env": "node scripts/check-env.js",
+    "check:email": "node scripts/check-email.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@octokit/rest": "^21.0.2",
+    "bcryptjs": "^2.4.3",
+    "bullmq": "^5.25.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^7.5.0",
+    "groq-sdk": "^0.9.0",
+    "helmet": "^8.0.0",
+    "ioredis": "^5.4.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.16",
+    "openai": "^4.77.0",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "reposense",
+  "version": "2.0.0",
+  "description": "RepoSense AI Assistant for GitHub Repo Owners",
+  "private": true,
+  "scripts": {
+    "dev": "docker-compose up -d mongo redis && concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix client",
+    "test": "npm test --prefix server",
+    "test:no-dummy": "npm run test:no-dummy --prefix server",
+    "test:no-pricing": "node server/scripts/test-no-pricing.js",
+    "test:theme": "node server/scripts/test-theme.js",
+    "audit:isolation": "npm run audit:isolation --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
